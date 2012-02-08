@@ -1,10 +1,13 @@
 using System;
 using JetBrains.Application.Progress;
+using JetBrains.DocumentManagers;
 using JetBrains.DocumentModel;
+using JetBrains.DocumentModel.Transactions;
 using JetBrains.ProjectModel;
 using JetBrains.ReSharper.Feature.Services.Bulbs;
 using JetBrains.ReSharper.Feature.Services.Xml.Bulbs;
 using JetBrains.ReSharper.Psi;
+using JetBrains.ReSharper.Psi.Resx.Utils;
 using JetBrains.ReSharper.Psi.Tree;
 using JetBrains.ReSharper.Psi.Xml.Tree;
 using JetBrains.TextControl;
@@ -35,7 +38,7 @@ namespace Resharper.Plugins.Minify
                     if (tag.PathToRoot().IsNullOrEmpty())
                         return "Minify file";
 
-                    return string.Format("Minify element '{0}'", tag.GetName());
+                    return string.Format("Minify element '{0}'", tag.GetName().GetText());
                 }
 
                 return "Minify element";
@@ -44,29 +47,51 @@ namespace Resharper.Plugins.Minify
 
         protected override Action<ITextControl> ExecutePsiTransaction(ISolution solution, IProgressIndicator progress)
         {
-            ITreeNode selectedElement = DataProvider.SelectedElement;
-            if (selectedElement != null)
+            if (SelectedXmlTag != null)
             {
-                DocumentRange elementRange = selectedElement.GetDocumentRange();
-                IPsiSourceFile sourceFile = selectedElement.GetSourceFile();
+                IPsiSourceFile sourceFile = SelectedXmlTag.GetSourceFile();
+                TreeTextRange valueRange = SelectedXmlTag.GetValueRange();
+
+                TextRange textRange = new TextRange(valueRange.StartOffset.Offset, valueRange.EndOffset.Offset);
                 if (sourceFile != null)
                 {
-                    IDocument document = sourceFile.Document;
-                    string minifiedDocument = Minifier.Minify(elementRange.GetText());
-                    document.ReplaceText(selectedElement.GetNavigationRange().TextRange, minifiedDocument);
+                    //DocumentTransactionManager dtm = solution.GetComponent<DocumentTransactionManager>();
+                    //dtm.StartTransaction("Resharper.Plugins.Xml.XmlMinifyElementContextAction");
+
+                    //DocumentManager dm = solution.GetComponent<DocumentManager>();
+                    //IRangeMarker dmRange = dm.CreateRangeMarker(SelectedXmlTag.GetDocumentRange());
+
+                    //dm.EnsureWritableSuccess(sourceFile.Document, () =>
+                    //{
+                        sourceFile.Document.DeleteText(textRange);
+                        sourceFile.Document.InsertText(textRange.StartOffset, SelectedXmlTagMinifiedInnerText);
+                    //});
+
+                    //dtm.CommitTransaction(progress);
                 }
             }
 
             return null;
         }
 
+        protected IXmlTag SelectedXmlTag { get; private set; }
+        protected string SelectedXmlTagInnerText { get; private set; }
+        protected string SelectedXmlTagMinifiedInnerText { get; private set; }
+
         public bool IsAvailable(IUserDataHolder cache)
         {
-            IXmlTag tag = DataProvider.FindNodeAtCaret<IXmlTag>();
+            SelectedXmlTag = DataProvider.FindNodeAtCaret<IXmlTag>();
 
-            if (tag != null && !tag.IsEmptyTag)
+            if (SelectedXmlTag != null && !SelectedXmlTag.IsEmptyTag && !SelectedXmlTag.Children().CountIs(0))
             {
-                return true;
+                // TODO: remove the next block once you know how to auto-save the doc after executing the action
+                if (!SelectedXmlTag.PathToRoot().CountIs(0))
+                    return false;
+                //end
+
+                SelectedXmlTagInnerText = SelectedXmlTag.InnerText;
+                SelectedXmlTagMinifiedInnerText = Minifier.Minify(SelectedXmlTagInnerText);
+                return !string.Equals(SelectedXmlTagInnerText, SelectedXmlTagMinifiedInnerText);
             }
 
             return false;
