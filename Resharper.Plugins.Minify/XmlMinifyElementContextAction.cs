@@ -55,19 +55,15 @@ namespace Resharper.Plugins.Minify
                 TextRange textRange = new TextRange(valueRange.StartOffset.Offset, valueRange.EndOffset.Offset);
                 if (sourceFile != null)
                 {
-                    //DocumentTransactionManager dtm = solution.GetComponent<DocumentTransactionManager>();
-                    //dtm.StartTransaction("Resharper.Plugins.Xml.XmlMinifyElementContextAction");
-
-                    //DocumentManager dm = solution.GetComponent<DocumentManager>();
-                    //IRangeMarker dmRange = dm.CreateRangeMarker(SelectedXmlTag.GetDocumentRange());
-
-                    //dm.EnsureWritableSuccess(sourceFile.Document, () =>
-                    //{
+                    try
+                    {
                         sourceFile.Document.DeleteText(textRange);
                         sourceFile.Document.InsertText(textRange.StartOffset, SelectedXmlTagMinifiedInnerText);
-                    //});
-
-                    //dtm.CommitTransaction(progress);
+                    }
+                    catch
+                    {
+                        // nomnom...
+                    }
                 }
             }
 
@@ -91,7 +87,9 @@ namespace Resharper.Plugins.Minify
 
                 SelectedXmlTagInnerText = SelectedXmlTag.InnerText;
                 SelectedXmlTagMinifiedInnerText = Minifier.Minify(SelectedXmlTagInnerText);
-                return !string.Equals(SelectedXmlTagInnerText, SelectedXmlTagMinifiedInnerText);
+                bool isAvailable = !string.Equals(SelectedXmlTagInnerText, SelectedXmlTagMinifiedInnerText);
+
+                return isAvailable;
             }
 
             return false;
