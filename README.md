@@ -1,8 +1,3 @@
-Description
-===========
-This Resharper plugin adds a few extra options to the XML element context actions provided by Resharper.
+📌 **This repository is no longer actively maintained and has been archived.**
 
-Features
-========
-- On XML root elements: minify file
-- On XML non-root elements: minify element
+This repository hosts a Resharper plugin that adds a *minify XML* option to the XML element contextual actions provided by Resharper.
